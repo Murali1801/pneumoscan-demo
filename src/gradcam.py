@@ -40,11 +40,27 @@ class CAMExplainer:
             raise ValueError("mode must be 'gradcam' or 'gradcam++'")
         self.mode = mode
         self.model = model
-        self.grad_model = keras.Model(
-            model.inputs,
-            [model.get_layer(FEATURE_LAYER).output, model.get_layer(LOGIT_LAYER).output],
-            name="grad_model",
-        )
+
+        # The model is split at `feature_map` so the backbone can run OUTSIDE the
+        # gradient tape. Grad-CAM only needs d(logit)/d(feature_map), and that
+        # path is three layers - pool, dropout, dense. Running the whole network
+        # under the tape makes TensorFlow retain the activations of all ~120
+        # DenseNet layers for a backward pass that never touches them; at 320x320
+        # that retention is most of the process's peak memory. Splitting is
+        # mathematically identical and is what makes the larger input affordable
+        # on a memory-capped host.
+        names = [layer.name for layer in model.layers]
+        i, j = names.index(FEATURE_LAYER), names.index(LOGIT_LAYER)
+
+        self.features = keras.Model(model.inputs,
+                                    model.get_layer(FEATURE_LAYER).output,
+                                    name="features")
+        head_in = keras.Input(shape=model.get_layer(FEATURE_LAYER).output.shape[1:],
+                              name="feature_map_in")
+        y = head_in
+        for layer in model.layers[i + 1:j + 1]:   # gap -> dropout -> logits
+            y = layer(y)                          # same layer objects, same weights
+        self.head = keras.Model(head_in, y, name="head")
 
     # -- core ---------------------------------------------------------------
     def explain(self, batch: np.ndarray, target: str = "pneumonia"):
@@ -54,9 +70,13 @@ class CAMExplainer:
         """
         x = tf.convert_to_tensor(batch, dtype=tf.float32)
 
+        # Backbone outside the tape: its activations are freed as soon as the
+        # feature map exists, instead of being held for an unused backward pass.
+        conv = self.features(x, training=False)
+
         with tf.GradientTape() as tape:
-            conv, logit = self.grad_model(x, training=False)
             tape.watch(conv)
+            logit = self.head(conv, training=False)
             score = logit[:, 0]
             if target == "predicted":
                 # +logit where the model says pneumonia, -logit where it says normal

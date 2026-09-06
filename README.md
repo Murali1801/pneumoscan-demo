@@ -18,11 +18,11 @@ heatmap showing what drove it.
 
 | | |
 |---|---|
-| Model | DenseNet121, 224×224 input, CLAHE preprocessing |
+| Model | DenseNet121, 320×320 input, CLAHE preprocessing |
 | Data | RSNA Pneumonia Detection Challenge (predominantly adult) |
-| Test AUROC | 0.876 on 4,447 held-out images |
-| Sensitivity / Specificity | 0.821 / 0.774 |
-| NPV / PPV | 0.937 / 0.516 |
+| Test AUROC | 0.879 on 4,447 held-out images |
+| Sensitivity / Specificity | 0.826 / 0.767 |
+| NPV / PPV | 0.938 / 0.510 |
 
 The decision threshold is the value tuned on validation data, not 0.5 — at this
 prevalence 0.5 is arbitrary. **NPV is the number that matters**: this is a
