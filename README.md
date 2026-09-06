@@ -32,4 +32,17 @@ Grad-CAM localisation was validated against the radiologist bounding boxes that
 ship with RSNA — the heatmap's hottest pixel lands inside a box 5.4× more often
 than chance.
 
+## Deploying this
+
+Needs **Python 3.10-3.12**. TensorFlow publishes no wheels for 3.13 or 3.14, and
+hosts default to the newest interpreter, so set the version *before* the first
+deploy or the build fails with `No matching distribution found for
+tensorflow-cpu`.
+
+* **Streamlit Community Cloud** — *Advanced settings -> Python version -> 3.12*
+  at deploy time. Note it does not fetch Git LFS objects, which is why the
+  checkpoint here is a plain 12.8 MB file.
+* **Docker** — the included `Dockerfile` pins `python:3.11-slim`, so this is
+  already handled.
+
 Full training pipeline: https://github.com/Murali1801/pneumoscan

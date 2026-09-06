@@ -1,3 +1,5 @@
+# Requires Python 3.10-3.12: TensorFlow has no wheels for 3.13/3.14, so the
+# interpreter version must be set in the host's settings. See README.
 streamlit>=1.49
 tensorflow-cpu==2.19.*
 opencv-python-headless>=4.9
